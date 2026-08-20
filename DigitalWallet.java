@@ -31,14 +31,12 @@ public class DigitalWallet {
             String accountId,
             String pin) {
 
-        if (accountId == null ||
-                accountId.isEmpty()) {
+        if (accountId == null || accountId.isEmpty()) {
             throw new IllegalArgumentException(
                     "Invalid account ID");
         }
 
-        if (pin == null ||
-                pin.length() != 4) {
+        if (pin == null || pin.length() != 4) {
             throw new IllegalArgumentException(
                     "Invalid PIN");
         }
@@ -90,8 +88,8 @@ public class DigitalWallet {
                     "Insufficient balance");
         }
 
-        if (account.dailyWithdrawn + amount >
-                DAILY_LIMIT) {
+        // Check daily limit BEFORE fraud detection.
+        if (account.dailyWithdrawn + amount > DAILY_LIMIT) {
             throw new IllegalStateException(
                     "Daily transaction limit exceeded");
         }
@@ -129,8 +127,7 @@ public class DigitalWallet {
                     "Insufficient balance");
         }
 
-        if (sender.dailyWithdrawn + amount >
-                DAILY_LIMIT) {
+        if (sender.dailyWithdrawn + amount > DAILY_LIMIT) {
             throw new IllegalStateException(
                     "Daily transaction limit exceeded");
         }
@@ -177,26 +174,31 @@ public class DigitalWallet {
             double amount,
             long timestamp) {
 
-        // More than 5 transactions in 10 minutes
-        long tenMinutes = 10;
+        // Large transaction detection.
+        if (amount > LARGE_TRANSACTION_LIMIT) {
+            throw new SecurityException(
+                    "Suspicious large transaction");
+        }
 
+        // Count previous transactions within the
+        // previous 10 minutes.
         int recentTransactions = 0;
 
         for (long time : account.transactionTimes) {
-            if (timestamp - time <= tenMinutes) {
+
+            long difference = timestamp - time;
+
+            if (difference >= 0 && difference <= 10) {
                 recentTransactions++;
             }
         }
 
-        if (recentTransactions >= 5) {
+        // The current transaction would be transaction
+        // number recentTransactions + 1.
+        // More than 5 means 6 or more transactions.
+        if (recentTransactions + 1 > 5) {
             throw new SecurityException(
                     "Suspicious transaction frequency");
-        }
-
-        // Large transaction
-        if (amount > LARGE_TRANSACTION_LIMIT) {
-            throw new SecurityException(
-                    "Suspicious large transaction");
         }
     }
 
